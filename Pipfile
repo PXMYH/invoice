@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+url = "https://www.paddlepaddle.org.cn/packages/nightly/cpu/"
+verify_ssl = true
+name = "wwwpaddlepaddleorg"
+
+[packages]
+paddleocr = "*"
+paddlepaddle = {version = "*", index = "wwwpaddlepaddleorg"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
+python_full_version = "3.10.15"
+
+[pipenv]
+allow_prereleases = true
