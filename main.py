@@ -24,8 +24,14 @@ def process_ocr_result(raw_result):
 
 def extract_number_from_text(text):
     """Extract number from text, handling both integer and decimal formats"""
+    # Remove any spaces from the text first
+    text = text.replace(' ', '')
+    
+    # If the text starts with any form of RMB symbol, remove it before extracting the number
+    if any(text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
+        text = text[1:]
+    
     number_match = re.search(r'\d+\.?\d*', text)
-    print(f"number_match: {number_match}")
     if number_match:
         return float(number_match.group())
     return None
@@ -67,35 +73,36 @@ def extract_invoice_data(texts, confidences):
     
     # Look for amounts from back to front
     for i in range(len(texts)-1, -1, -1):
-        text = texts[i]
-        current_text = texts[i]
+        text = texts[i].strip()  # Remove leading/trailing whitespace
+        current_text = text
         print(f"current_text: {current_text}")
         
-        # Check if text starts with Y or ¥ and contains numbers
-        if (text.startswith('Y') or text.startswith('¥')):
-            print(f"text starts with Y or ¥: {text}")
+        # Check if text starts with any form of RMB symbol and contains numbers
+        if any(text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
+            print(f"Found amount text: {text}")
             amount = extract_number_from_text(text)
-            print(f"amount: {amount}")
+            print(f"Extracted amount: {amount}")
+            
             if amount is not None:
                 result_map['amount'] = amount
                 
                 # Check numbers before and after for tax amount
                 if i > 0 and i < len(texts) - 1:
-                    prev_text = texts[i-1]
-                    next_text = texts[i+1]
+                    prev_text = texts[i-1].strip()
+                    next_text = texts[i+1].strip()
                     
                     # Extract numbers from adjacent texts
                     prev_amount = extract_number_from_text(prev_text)
                     next_amount = extract_number_from_text(next_text)
                     
                     # Check previous text
-                    if prev_amount is not None and not (prev_text.startswith('Y') or prev_text.startswith('¥')):
+                    if prev_amount is not None and not any(prev_text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
                         if is_valid_amount_pair(amount, prev_amount):
                             result_map['tax_amount'] = prev_amount
                             break
                             
                     # Check next text
-                    if next_amount is not None and not (next_text.startswith('Y') or next_text.startswith('¥')):
+                    if next_amount is not None and not any(next_text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
                         if is_valid_amount_pair(amount, next_amount):
                             result_map['tax_amount'] = next_amount
                             break
@@ -106,7 +113,6 @@ def extract_invoice_data(texts, confidences):
 ocr = PaddleOCR(use_angle_cls=True, lang='ch')
 
 # Read image
-# img_path = './data/receipt5.jpg'
 img_path = './raw_data/07cb74596eccb66556ebbcf1d02cd8ed.jpg'
 print(f"Image path set to {img_path}")
 img = cv2.imread(img_path)
@@ -132,6 +138,6 @@ for key, value in invoice_map.items():
     if key == 'invoice_number':
         print(f"Invoice Number: {value}")
     elif key == 'amount':
-        print(f"Amount: {value}")
+        print(f"Amount: ¥{value}")
     elif key == 'tax_amount':
-        print(f"Tax Amount: {value}")
+        print(f"Tax Amount: ¥{value}")
