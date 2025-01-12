@@ -1,6 +1,7 @@
 from paddleocr import PaddleOCR, draw_ocr
 import cv2
 import re
+from typing import List, Dict, Tuple
 
 def process_ocr_result(raw_result):
     # Initialize lists to store separated components
@@ -22,7 +23,7 @@ def process_ocr_result(raw_result):
     
     return bboxes, texts, confidences
 
-def extract_number_from_text(text):
+def extract_number_from_text(text: str) -> float:
     """Extract number from text, handling both integer and decimal formats"""
     # Remove any spaces from the text first
     text = text.replace(' ', '')
@@ -36,76 +37,83 @@ def extract_number_from_text(text):
         return float(number_match.group())
     return None
 
-def is_valid_amount_pair(amount1, amount2):
-    """Check if two amounts have a valid relationship"""
+def is_valid_amount_pair(amount1: float, amount2: float) -> bool:
+    """
+    Check if two amounts have a valid relationship for amount/tax pairs.
+    Valid range is when smaller amount is between 3% and 50% of larger amount.
+    """
     if amount1 == 0 or amount2 == 0:
         return False
         
-    # Check if one is not 33x bigger than the other, China's lowest tax rate is 3%
-    if amount1 > amount2:
-        ratio = amount1 / amount2
-        if ratio > 33:
-            return False
-    else:
-        ratio = amount2 / amount1
-        if ratio > 33:
-            return False
-    
-    # Check if one is not 97% smaller than the other
+    larger = max(amount1, amount2)
     smaller = min(amount1, amount2)
-    bigger = max(amount1, amount2)
-    if smaller < (bigger * 0.03):  # 97% smaller
-        return False
-        
-    return True
+    percentage = (smaller / larger) * 100
 
-def extract_invoice_data(texts, confidences):
+    # Check if percentage falls within valid range (3% to 50%)
+    return 3 <= percentage <= 50
+
+def find_best_amount_tax_pair(amounts: List[float]) -> Tuple[float, float]:
+    """
+    Take only the first two amounts found and check if they form a valid pair.
+    Returns (amount, tax) tuple, or (None, None) if no valid pair found.
+    """
+    if len(amounts) < 2:
+        return None, None
+
+    # Only take first two amounts
+    first_two = amounts[:2]
+    
+    if is_valid_amount_pair(first_two[0], first_two[1]):
+        larger = max(first_two[0], first_two[1])
+        smaller = min(first_two[0], first_two[1])
+        return larger, smaller
+    
+    return None, None
+
+def extract_invoice_data(texts: List[str], confidences: List[float]) -> Dict:
     result_map = {}
+    potential_amounts = []
     
     # Find invoice number (发票号码)
     for i, text in enumerate(texts):
         if '发票号码' in text:
             number_match = re.search(r'\d+', text)
             if number_match:
-                invoice_number = number_match.group()
-                result_map['invoice_number'] = invoice_number
+                result_map['invoice_number'] = number_match.group()
                 break
     
-    # Look for amounts from back to front
-    for i in range(len(texts)-1, -1, -1):
-        text = texts[i].strip()  # Remove leading/trailing whitespace
-        current_text = text
-        print(f"current_text: {current_text}")
+    # First pass: collect all amounts with RMB symbols
+    for i, text in enumerate(texts):
+        text = text.strip()
+        print(f"Processing text: {text}")
         
-        # Check if text starts with any form of RMB symbol and contains numbers
         if any(text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
             print(f"Found amount text: {text}")
             amount = extract_number_from_text(text)
-            print(f"Extracted amount: {amount}")
-            
             if amount is not None:
-                result_map['amount'] = amount
-                
-                # Check numbers before and after for tax amount
-                if i > 0 and i < len(texts) - 1:
-                    prev_text = texts[i-1].strip()
-                    next_text = texts[i+1].strip()
-                    
-                    # Extract numbers from adjacent texts
-                    prev_amount = extract_number_from_text(prev_text)
-                    next_amount = extract_number_from_text(next_text)
-                    
-                    # Check previous text
-                    if prev_amount is not None and not any(prev_text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
-                        if is_valid_amount_pair(amount, prev_amount):
-                            result_map['tax_amount'] = prev_amount
-                            break
-                            
-                    # Check next text
-                    if next_amount is not None and not any(next_text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
-                        if is_valid_amount_pair(amount, next_amount):
-                            result_map['tax_amount'] = next_amount
-                            break
+                print(f"Extracted amount: {amount}")
+                potential_amounts.append(amount)
+
+    # Second pass: find nearby numbers that could be tax amounts
+    for i, text in enumerate(texts):
+        text = text.strip()
+        # Skip texts that start with RMB symbols
+        if any(text.startswith(symbol) for symbol in ['¥', '￥', 'Y']):
+            continue
+            
+        amount = extract_number_from_text(text)
+        if amount is not None:
+            potential_amounts.append(amount)
+            print(f"Found potential tax amount: {amount}")
+
+    print(f"All potential amounts found: {potential_amounts}")
+    
+    # Find the best amount/tax pair
+    if potential_amounts:
+        amount, tax = find_best_amount_tax_pair(potential_amounts)
+        if amount is not None and tax is not None:
+            result_map['amount'] = amount
+            result_map['tax_amount'] = tax
     
     return result_map
 
@@ -113,7 +121,14 @@ def extract_invoice_data(texts, confidences):
 ocr = PaddleOCR(use_angle_cls=True, lang='ch')
 
 # Read image
-img_path = './raw_data/07cb74596eccb66556ebbcf1d02cd8ed.jpg'
+# img_path = './raw_data/3eea28e4cb243595ff8d0b5671cd3ad7.jpg'
+# img_path = './raw_data/07cb74596eccb66556ebbcf1d02cd8ed.jpg'
+# img_path = './raw_data/55d3348ca242446ec0f4d4caddc36ece.jpg' # incorrect tax amount
+# img_path = './raw_data/71de01566ca0b5fb23a8b31279e8e47f.jpg' # ok
+img_path = './raw_data/7463ef205bea896c99a5ad2d0078697e.jpg'
+# img_path = './raw_data/22688c7ae67007e3ce5b83ba3a52c377.jpg'
+# img_path = './raw_data/c09c35d3c6fb9cb829bfc66f663af87b.jpg'
+# img_path = './raw_data/e06ba400cae7baef5b08aea66e3f8bc5.jpg'
 print(f"Image path set to {img_path}")
 img = cv2.imread(img_path)
 print(f"Loaded receipt image, proceed to OCR ...")

@@ -86,7 +86,7 @@ def process_receipts(folder_path):
     return receipts_map, failed_files
 
 # Process all receipts in the data folder
-folder_path = './data'
+folder_path = './raw_data'
 receipts_map, failed_files = process_receipts(folder_path)
 
 # Print successful results
