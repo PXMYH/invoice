@@ -121,12 +121,12 @@ def extract_invoice_data(texts: List[str], confidences: List[float]) -> Dict:
 ocr = PaddleOCR(use_angle_cls=True, lang='ch')
 
 # Read image
-# img_path = './raw_data/3eea28e4cb243595ff8d0b5671cd3ad7.jpg' # no amount and tax amount found, to be precise, it's tax amount decoded is 136 67, therefore marked as invalid, amount is decoded correctly
+# img_path = './raw_data/3eea28e4cb243595ff8d0b5671cd3ad7.jpg' # no tax amount found, tax amount decoded is 136 67, therefore marked as invalid, amount is decoded correctly
 # img_path = './raw_data/07cb74596eccb66556ebbcf1d02cd8ed.jpg' # ok
 # img_path = './raw_data/55d3348ca242446ec0f4d4caddc36ece.jpg' # incorrect tax amount
 # img_path = './raw_data/71de01566ca0b5fb23a8b31279e8e47f.jpg' # ok
 # img_path = './raw_data/7463ef205bea896c99a5ad2d0078697e.jpg' # ok
-# img_path = './raw_data/22688c7ae67007e3ce5b83ba3a52c377.jpg' # no amount and tax amount found
+img_path = './raw_data/22688c7ae67007e3ce5b83ba3a52c377.jpg' # no tax amount found, tax amount decoded as ￥7261Z Confidence: 0.7562
 # img_path = './raw_data/c09c35d3c6fb9cb829bfc66f663af87b.jpg' #ok
 # img_path = './raw_data/e06ba400cae7baef5b08aea66e3f8bc5.jpg' # ok
 print(f"Image path set to {img_path}")
