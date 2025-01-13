@@ -11,6 +11,7 @@ name = "wwwpaddlepaddleorg"
 [packages]
 paddleocr = "*"
 paddlepaddle = {version = "*", index = "wwwpaddlepaddleorg"}
+streamlit = "*"
 
 [dev-packages]
 

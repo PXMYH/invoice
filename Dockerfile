@@ -8,7 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-RUN pip install pyzbar Pillow
+RUN pip install pyzbar Pillow streamlit paddleocr
 
 # Set working directory
 WORKDIR /app

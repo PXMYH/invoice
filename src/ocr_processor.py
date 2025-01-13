@@ -64,10 +64,12 @@ class OCRProcessor:
     def process_image(self, image_path: str) -> OCRResult:
         try:
             img = cv2.imread(image_path)
+            print("Processing image: ", image_path)
             if img is None:
                 return OCRResult(success=False, error_message=f"Failed to load image: {image_path}")
 
             raw_result = self.ocr.ocr(img, cls=True)
+            print("Raw OCR result: ", raw_result)
             bboxes, texts, confidences = self.process_ocr_result(raw_result)
             
             result = OCRResult()

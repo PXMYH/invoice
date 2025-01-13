@@ -2,7 +2,7 @@ from invoice_processor import InvoiceProcessor
 
 def main():
     processor = InvoiceProcessor()
-    folder_path = './raw_data'
+    folder_path = './data'
     
     print(f"Processing invoices in folder: {folder_path}")
     results_map, failed_files = processor.process_folder(folder_path)

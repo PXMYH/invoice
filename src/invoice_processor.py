@@ -20,10 +20,12 @@ class InvoiceProcessor:
         result = ProcessingResult()
         
         # Process OCR
+        print("Processing OCR...")
         ocr_result = self.ocr_processor.process_image(image_path)
         result.ocr_result = ocr_result
         
         # Process QR
+        print("Processing QR code...")
         qr_result = self.qr_processor.process_image(image_path)
         result.qr_result = qr_result
         
