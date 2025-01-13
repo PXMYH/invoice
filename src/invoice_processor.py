@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
-from ocr_processor import OCRProcessor, OCRResult
-from qr_processor import QRProcessor, QRResult
+from .ocr_processor import OCRProcessor, OCRResult
+from .qr_processor import QRProcessor, QRResult
 import os
 
 @dataclass
