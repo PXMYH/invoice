@@ -162,32 +162,28 @@
                 const resultDiv = document.createElement('div');
                 resultDiv.className = `result-item ${result.success ? 'success' : 'error'}`;
                 
+                // Merge OCR and QR results
+                const mergedResult = {
+                    invoice_number: result.ocr_result?.invoice_number || result.qr_result?.receipt_number || 'N/A',
+                    amount: result.ocr_result?.amount || result.qr_result?.total_amount || 'N/A',
+                    tax_amount: result.ocr_result?.tax_amount || 'N/A',
+                    date: result.qr_result?.receipt_date || 'N/A'
+                };
+
                 let resultHtml = `
                     <h3>${result.filename}</h3>
                     ${result.error_message ? `<p class="error-message">${result.error_message}</p>` : ''}
                 `;
 
-                if (result.ocr_result) {
+                if (result.ocr_result || result.qr_result) {
                     resultHtml += `
                         <div>
-                            <h4>OCR Results:</h4>
+                            <h4>Extracted Information:</h4>
                             <ul>
-                                <li>Invoice Number: ${result.ocr_result.invoice_number || 'N/A'}</li>
-                                <li>Amount: ${result.ocr_result.amount || 'N/A'}</li>
-                                <li>Tax Amount: ${result.ocr_result.tax_amount || 'N/A'}</li>
-                            </ul>
-                        </div>
-                    `;
-                }
-
-                if (result.qr_result) {
-                    resultHtml += `
-                        <div>
-                            <h4>QR Code Results:</h4>
-                            <ul>
-                                <li>Receipt Number: ${result.qr_result.receipt_number || 'N/A'}</li>
-                                <li>Total Amount: ${result.qr_result.total_amount || 'N/A'}</li>
-                                <li>Receipt Date: ${result.qr_result.receipt_date || 'N/A'}</li>
+                                <li>Invoice Number: ${mergedResult.invoice_number}</li>
+                                <li>Amount: ${mergedResult.amount}</li>
+                                <li>Tax Amount: ${mergedResult.tax_amount}</li>
+                                <li>Date: ${mergedResult.date}</li>
                             </ul>
                         </div>
                     `;
