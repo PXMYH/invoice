@@ -2,6 +2,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .invoice_processor import InvoiceProcessor  # Changed to relative import
 import tempfile
 import os
@@ -24,6 +26,16 @@ app = FastAPI(
     description="API for processing invoices using OCR and QR codes",
     version="1.0.0"
 )
+
+# Add this after creating the FastAPI app
+# app.mount("/static", StaticFiles(directory="./src/static"), name="static")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/")
+async def read_root():
+    return FileResponse(static_dir + "/index.html")
+
 
 # Initialize the processor once at startup
 processor = InvoiceProcessor()
@@ -109,4 +121,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=9845)

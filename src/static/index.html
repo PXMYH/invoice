@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .file-list {
+            margin: 20px 0;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f5f5f5;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .result-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            border-left: 5px solid #4CAF50;
+        }
+        .error {
+            border-left: 5px solid #f44336;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #f44336;
+            margin: 10px 0;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Invoice Processor</h1>
+    <p>Upload invoices to extract information using OCR and QR codes</p>
+
+    <div class="upload-container">
+        <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png" style="display: none;">
+        <label for="fileInput">
+            <div>Click to upload or drag and drop files here</div>
+            <div style="font-size: 0.8em; color: #666;">Supported formats: PNG, JPG, JPEG</div>
+        </label>
+    </div>
+
+    <div id="fileList" class="file-list"></div>
+    
+    <button id="processButton" disabled>Process Invoices</button>
+    <div id="loading" class="loading">Processing...</div>
+    <div id="errorMessage" class="error-message"></div>
+    <div id="results" class="results"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const processButton = document.getElementById('processButton');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const results = document.getElementById('results');
+        let selectedFiles = [];
+
+        fileInput.addEventListener('change', handleFileSelect);
+        processButton.addEventListener('click', processFiles);
+
+        function handleFileSelect(event) {
+            selectedFiles = Array.from(event.target.files);
+            updateFileList();
+            processButton.disabled = selectedFiles.length === 0;
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${file.name}</span>
+                    <button onclick="removeFile(${index})">Remove</button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            processButton.disabled = selectedFiles.length === 0;
+        }
+
+        async function processFiles() {
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            processButton.disabled = true;
+            loading.style.display = 'block';
+            errorMessage.textContent = '';
+            results.innerHTML = '';
+
+            try {
+                const response = await fetch('/process-invoices/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+            } finally {
+                loading.style.display = 'none';
+                processButton.disabled = false;
+            }
+        }
+
+        function displayResults(resultsData) {
+            results.innerHTML = '<h2>Processing Results</h2>';
+            
+            resultsData.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `result-item ${result.success ? 'success' : 'error'}`;
+                
+                let resultHtml = `
+                    <h3>${result.filename}</h3>
+                    ${result.error_message ? `<p class="error-message">${result.error_message}</p>` : ''}
+                `;
+
+                if (result.ocr_result) {
+                    resultHtml += `
+                        <div>
+                            <h4>OCR Results:</h4>
+                            <ul>
+                                <li>Invoice Number: ${result.ocr_result.invoice_number || 'N/A'}</li>
+                                <li>Amount: ${result.ocr_result.amount || 'N/A'}</li>
+                                <li>Tax Amount: ${result.ocr_result.tax_amount || 'N/A'}</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (result.qr_result) {
+                    resultHtml += `
+                        <div>
+                            <h4>QR Code Results:</h4>
+                            <ul>
+                                <li>Receipt Number: ${result.qr_result.receipt_number || 'N/A'}</li>
+                                <li>Total Amount: ${result.qr_result.total_amount || 'N/A'}</li>
+                                <li>Receipt Date: ${result.qr_result.receipt_date || 'N/A'}</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                resultDiv.innerHTML = resultHtml;
+                results.appendChild(resultDiv);
+            });
+        }
+    </script>
+</body>
+</html>
