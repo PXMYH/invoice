@@ -14,7 +14,7 @@ class OCRResult:
 
 class OCRProcessor:
     def __init__(self):
-        self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
+        self.ocr = PaddleOCR(use_angle_cls=True, lang='ch', enable_mkldnn=True)
         
     def process_ocr_result(self, raw_result) -> Tuple[List, List, List]:
         bboxes, texts, confidences = [], [], []
