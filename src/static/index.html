@@ -93,6 +93,7 @@
     <div id="fileList" class="file-list"></div>
     
     <button id="processButton" disabled>Process Invoices</button>
+    <button id="exportButton" style="display: none; margin-left: 10px; background-color: #007bff;">Export to CSV</button>
     <div id="loading" class="loading">Processing...</div>
     <div id="errorMessage" class="error-message"></div>
     <div id="summary" class="summary" style="display: none;">
@@ -107,6 +108,7 @@
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
         const processButton = document.getElementById('processButton');
+        const exportButton = document.getElementById('exportButton');
         const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
         const results = document.getElementById('results');
@@ -168,6 +170,55 @@
                 : value;
         }
 
+        function exportToCSV(data) {
+            // Format values for CSV, handling commas and quotes
+            const formatCSVValue = (value) => {
+                if (value === null || value === undefined) return 'N/A';
+                // If number, format with 2 decimal places
+                if (typeof value === 'number') return value.toFixed(2);
+                // Convert to string and handle commas by wrapping in quotes
+                const stringValue = String(value);
+                return stringValue.includes(',') ? `"${stringValue}"` : stringValue;
+            };
+
+            // Prepare CSV content
+            const csvRows = [
+                // CSV header
+                ['Invoice Number', 'OCR Amount', 'QR Total Amount', 'Tax Amount', 'Date']
+            ];
+
+            // Add data rows
+            data.forEach(result => {
+                if (result.success) {
+                    csvRows.push([
+                        formatCSVValue(result.ocr_result?.invoice_number || result.qr_result?.receipt_number),
+                        formatCSVValue(result.ocr_result?.amount),
+                        formatCSVValue(result.qr_result?.total_amount),
+                        formatCSVValue(result.ocr_result?.tax_amount),
+                        formatCSVValue(result.qr_result?.receipt_date)
+                    ]);
+                }
+            });
+
+            // Convert to CSV string with proper line endings
+            const csvContent = csvRows.map(row => row.join(',')).join('\r\n');
+
+            // Create blob with BOM for Excel compatibility
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            
+            // Create download link and trigger download
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `invoice_results_${timestamp}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
         async function processFiles() {
             if (selectedFiles.length === 0) return;
 
@@ -181,6 +232,7 @@
             errorMessage.textContent = '';
             results.innerHTML = '';
             summary.style.display = 'none';
+            exportButton.style.display = 'none';
 
             try {
                 const response = await fetch('/process-invoices/', {
@@ -195,6 +247,10 @@
                 const data = await response.json();
                 displayResults(data);
                 calculateAndDisplayTotals(data);
+                // Show export button when we have results
+                exportButton.style.display = 'inline-block';
+                // Add click handler for export
+                exportButton.onclick = () => exportToCSV(data);
             } catch (error) {
                 errorMessage.textContent = `Error: ${error.message}`;
             } finally {
