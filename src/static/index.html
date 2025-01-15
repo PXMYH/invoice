@@ -64,6 +64,18 @@
             display: none;
             margin: 20px 0;
         }
+        .summary {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 5px solid #007bff;
+        }
+        .total-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
     </style>
 </head>
 <body>
@@ -83,6 +95,12 @@
     <button id="processButton" disabled>Process Invoices</button>
     <div id="loading" class="loading">Processing...</div>
     <div id="errorMessage" class="error-message"></div>
+    <div id="summary" class="summary" style="display: none;">
+        <h3>Processing Summary</h3>
+        <p>Total OCR Amount: <span id="totalOcrAmount" class="total-value">¥0</span></p>
+        <p>Total QR Amount: <span id="totalQrAmount" class="total-value">¥0</span></p>
+        <p>Total Tax Amount: <span id="totalTaxAmount" class="total-value">¥0</span></p>
+    </div>
     <div id="results" class="results"></div>
 
     <script>
@@ -92,10 +110,31 @@
         const loading = document.getElementById('loading');
         const errorMessage = document.getElementById('errorMessage');
         const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
         let selectedFiles = [];
 
         fileInput.addEventListener('change', handleFileSelect);
         processButton.addEventListener('click', processFiles);
+
+        // Add drag and drop functionality
+        const uploadContainer = document.querySelector('.upload-container');
+        uploadContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#4CAF50';
+        });
+
+        uploadContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#ccc';
+        });
+
+        uploadContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadContainer.style.borderColor = '#ccc';
+            const files = e.dataTransfer.files;
+            fileInput.files = files;
+            handleFileSelect({ target: fileInput });
+        });
 
         function handleFileSelect(event) {
             selectedFiles = Array.from(event.target.files);
@@ -122,6 +161,13 @@
             processButton.disabled = selectedFiles.length === 0;
         }
 
+        function formatCurrency(value) {
+            if (value === 'N/A') return 'N/A';
+            return typeof value === 'number' 
+                ? `¥${value.toFixed(2)}` 
+                : value;
+        }
+
         async function processFiles() {
             if (selectedFiles.length === 0) return;
 
@@ -134,6 +180,7 @@
             loading.style.display = 'block';
             errorMessage.textContent = '';
             results.innerHTML = '';
+            summary.style.display = 'none';
 
             try {
                 const response = await fetch('/process-invoices/', {
@@ -147,12 +194,38 @@
 
                 const data = await response.json();
                 displayResults(data);
+                calculateAndDisplayTotals(data);
             } catch (error) {
                 errorMessage.textContent = `Error: ${error.message}`;
             } finally {
                 loading.style.display = 'none';
                 processButton.disabled = false;
             }
+        }
+
+        function calculateAndDisplayTotals(resultsData) {
+            let totalOcrAmount = 0;
+            let totalQrAmount = 0;
+            let totalTaxAmount = 0;
+
+            resultsData.forEach(result => {
+                if (result.success) {
+                    if (result.ocr_result?.amount) {
+                        totalOcrAmount += result.ocr_result.amount;
+                    }
+                    if (result.qr_result?.total_amount) {
+                        totalQrAmount += result.qr_result.total_amount;
+                    }
+                    if (result.ocr_result?.tax_amount) {
+                        totalTaxAmount += result.ocr_result.tax_amount;
+                    }
+                }
+            });
+
+            document.getElementById('totalOcrAmount').textContent = formatCurrency(totalOcrAmount);
+            document.getElementById('totalQrAmount').textContent = formatCurrency(totalQrAmount);
+            document.getElementById('totalTaxAmount').textContent = formatCurrency(totalTaxAmount);
+            summary.style.display = 'block';
         }
 
         function displayResults(resultsData) {
@@ -162,10 +235,11 @@
                 const resultDiv = document.createElement('div');
                 resultDiv.className = `result-item ${result.success ? 'success' : 'error'}`;
                 
-                // Merge OCR and QR results
+                // Merge OCR and QR results while keeping amounts separate
                 const mergedResult = {
                     invoice_number: result.ocr_result?.invoice_number || result.qr_result?.receipt_number || 'N/A',
-                    amount: result.ocr_result?.amount || result.qr_result?.total_amount || 'N/A',
+                    amount: result.ocr_result?.amount || 'N/A',
+                    total_amount: result.qr_result?.total_amount || 'N/A',
                     tax_amount: result.ocr_result?.tax_amount || 'N/A',
                     date: result.qr_result?.receipt_date || 'N/A'
                 };
@@ -181,8 +255,9 @@
                             <h4>Extracted Information:</h4>
                             <ul>
                                 <li>Invoice Number: ${mergedResult.invoice_number}</li>
-                                <li>Amount: ${mergedResult.amount}</li>
-                                <li>Tax Amount: ${mergedResult.tax_amount}</li>
+                                <li>OCR Amount: ${formatCurrency(mergedResult.amount)}</li>
+                                <li>QR Total Amount: ${formatCurrency(mergedResult.total_amount)}</li>
+                                <li>Tax Amount: ${formatCurrency(mergedResult.tax_amount)}</li>
                                 <li>Date: ${mergedResult.date}</li>
                             </ul>
                         </div>
