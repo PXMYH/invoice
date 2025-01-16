@@ -11,7 +11,11 @@ name = "wwwpaddlepaddleorg"
 [packages]
 paddleocr = "*"
 paddlepaddle = {version = "*", index = "wwwpaddlepaddleorg"}
-streamlit = "*"
+pyzbar = "*"
+Pillow = "*"
+fastapi = "*"
+uvicorn = "*"
+python-multipart = "*"
 
 [dev-packages]
 
