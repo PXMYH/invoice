@@ -26,8 +26,8 @@ jobs:
       # Convert repository owner to lowercase
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/paddleocr:latest .
+          docker build -t ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/invoice:latest .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/paddleocr:latest
+          docker push ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/invoice:latest
