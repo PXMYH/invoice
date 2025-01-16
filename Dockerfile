@@ -8,22 +8,17 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python packages
-RUN pip install \
-    pyzbar \
-    Pillow \
-    paddleocr
-
 # Set working directory
 WORKDIR /app
 
-# Copy application files from src directory
-COPY src/app.py .
-COPY src/invoice_processor.py .
-COPY src/ocr_processor.py .
-COPY src/qr_processor.py .
-COPY src/main.py .
+# Copy only necessary files
+COPY requirements.txt .
 
-# Create data directory and copy sample data
-RUN mkdir -p /app/data
-COPY data /app/data
+# Install Python packages
+RUN pip install -r requirements.txt
+
+# Copy application files from src directory
+COPY src/ src/
+
+# Set the default command to run the FastAPI app
+CMD ["uvicorn", "src.api:app", "--reload", "--host", "0.0.0.0", "--port", "9845"]
