@@ -1,10 +1,8 @@
 # Sources
 --index-url https://pypi.org/simple
---extra-index-url https://www.paddlepaddle.org.cn/packages/nightly/cpu/
 
 # Packages
 paddleocr
-paddlepaddle @ https://www.paddlepaddle.org.cn/packages/nightly/cpu/
 pyzbar
 Pillow
 fastapi
