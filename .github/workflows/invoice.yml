@@ -16,7 +16,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Updated login configuration for GHCR
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -24,10 +23,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Convert repository owner to lowercase
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/paddleocr:latest .
+          docker build -t ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/paddleocr:latest .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/paddleocr:latest
+          docker push ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/paddleocr:latest
